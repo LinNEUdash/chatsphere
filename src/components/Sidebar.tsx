@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 import {
   MessageSquarePlus,
   PanelLeftClose,
@@ -11,6 +12,7 @@ import {
   Moon,
   Trash2,
   MessageSquare,
+  LogOut,
 } from "lucide-react";
 import { Conversation } from "@/types";
 import { useTheme } from "@/context/ThemeContext";
@@ -18,7 +20,7 @@ import clsx from "clsx";
 
 interface SidebarProps {
   conversations: Conversation[];
-  activeId: string;
+  activeId: string | null;
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
@@ -33,6 +35,9 @@ export default function Sidebar({
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { data: session } = useSession();
+
+  const getConvId = (conv: Conversation) => conv._id || conv.id;
 
   return (
     <aside
@@ -79,14 +84,19 @@ export default function Sidebar({
 
       {/* Conversation list */}
       <div className="mt-4 flex-1 overflow-y-auto px-3 space-y-1">
+        {conversations.length === 0 && !isCollapsed && (
+          <p className="px-2 text-xs text-gray-400 dark:text-gray-500">
+            No conversations yet
+          </p>
+        )}
         {isCollapsed
           ? conversations.map((conv) => (
               <button
-                key={conv.id}
-                onClick={() => onSelectChat(conv.id)}
+                key={getConvId(conv)}
+                onClick={() => onSelectChat(getConvId(conv))}
                 className={clsx(
                   "flex w-full justify-center rounded-lg p-2 transition-colors",
-                  conv.id === activeId
+                  getConvId(conv) === activeId
                     ? "bg-gray-200 dark:bg-gray-700"
                     : "hover:bg-gray-100 dark:hover:bg-gray-700/50"
                 )}
@@ -94,7 +104,7 @@ export default function Sidebar({
                 <MessageSquare
                   className={clsx(
                     "h-4 w-4",
-                    conv.id === activeId
+                    getConvId(conv) === activeId
                       ? "text-blue-600 dark:text-blue-400"
                       : "text-gray-400 dark:text-gray-500"
                   )}
@@ -103,29 +113,28 @@ export default function Sidebar({
             ))
           : conversations.map((conv) => (
               <div
-                key={conv.id}
+                key={getConvId(conv)}
                 className={clsx(
                   "group flex items-center gap-2 rounded-xl px-3 py-2.5 cursor-pointer transition-colors",
-                  conv.id === activeId
+                  getConvId(conv) === activeId
                     ? "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
                 )}
-                onClick={() => onSelectChat(conv.id)}
+                onClick={() => onSelectChat(getConvId(conv))}
               >
                 <MessageSquare
                   className={clsx(
                     "h-4 w-4 shrink-0",
-                    conv.id === activeId
+                    getConvId(conv) === activeId
                       ? "text-blue-600 dark:text-blue-400"
                       : "text-gray-400 dark:text-gray-500"
                   )}
                 />
                 <span className="flex-1 truncate text-sm">{conv.title}</span>
-                {/* Delete button - visible on hover */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDeleteChat(conv.id);
+                    onDeleteChat(getConvId(conv));
                   }}
                   className="opacity-0 group-hover:opacity-100 rounded p-1 transition-opacity hover:bg-gray-300 dark:hover:bg-gray-600"
                   title="Delete conversation"
@@ -136,8 +145,9 @@ export default function Sidebar({
             ))}
       </div>
 
-      {/* Bottom: theme toggle */}
+      {/* Bottom: user info + theme + sign out */}
       <div className="border-t border-gray-200 dark:border-gray-700 p-3 space-y-2">
+        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           className={clsx(
@@ -154,10 +164,39 @@ export default function Sidebar({
             <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
           )}
         </button>
-        {!isCollapsed && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-            v1.0.0
-          </p>
+
+        {/* User info + sign out */}
+        {session?.user && (
+          <div
+            className={clsx(
+              "flex items-center gap-2 rounded-lg p-2",
+              isCollapsed && "justify-center"
+            )}
+          >
+            {session.user.image ? (
+              <img
+                src={session.user.image}
+                alt="avatar"
+                className="h-6 w-6 rounded-full shrink-0"
+              />
+            ) : (
+              <div className="h-6 w-6 rounded-full bg-blue-600 shrink-0" />
+            )}
+            {!isCollapsed && (
+              <>
+                <span className="flex-1 truncate text-xs text-gray-600 dark:text-gray-400">
+                  {session.user.name || session.user.email}
+                </span>
+                <button
+                  onClick={() => signOut()}
+                  className="rounded p-1 text-gray-400 hover:text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  title="Sign out"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
     </aside>

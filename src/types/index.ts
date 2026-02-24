@@ -9,6 +9,7 @@ export interface Message {
 
 export interface Conversation {
   id: string;
+  _id?: string;
   title: string;
   messages: Message[];
   createdAt: Date;
