@@ -17,14 +17,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 获取 Gemini 模型
+    // Initialize Gemini model
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction:
         "You are ChatSphere AI, a helpful and friendly assistant. Respond concisely and clearly.",
     });
 
-    // 将消息格式转换为 Gemini 格式
+    // Convert messages to Gemini format
     const history = messages.slice(0, -1).map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
@@ -32,11 +32,11 @@ export async function POST(req: NextRequest) {
 
     const lastMessage = messages[messages.length - 1].content;
 
-    // 创建聊天并发送流式请求
+    // Start chat and send streaming request
     const chat = model.startChat({ history });
     const result = await chat.sendMessageStream(lastMessage);
 
-    // 将 Gemini 的流转换为 SSE 格式返回给前端
+    // Convert Gemini stream to SSE format
     const encoder = new TextEncoder();
     const readableStream = new ReadableStream({
       async start(controller) {
